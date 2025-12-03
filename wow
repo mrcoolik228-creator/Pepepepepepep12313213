@@ -1,0 +1,98 @@
+import logging
+from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    MessageHandler,
+    CallbackQueryHandler,
+    filters,
+    ContextTypes
+)
+
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+TOKEN = 'token'
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [
+        ["Время работы",],
+        ["Специальности", "Связаться с нами"],
+        ["Сайт техникума"]
+    ]
+    
+    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    
+    await update.message.reply_text(
+        "Добро пожаловать! На неофициального бота ПОЧУ. Выберите действие:",
+        reply_markup=reply_markup
+    )
+
+async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text
+    
+    if text == "Время работы":
+        await update.message.reply_text("пн-пт 08:30–18:00; сб 08:00–15:00")
+
+    if text == "Связаться с нами":
+        await update.message.reply_text("Адрес:Российская Федерация, Удмуртская Республика, город Ижевск,ул. Молодёжная,д. 109")
+        await update.message.reply_text("Адрес электронной почты: ikoopteh@mail.ru")
+        await update.message.reply_text('Приемная директора: (3412)370288')
+        await update.message.reply_text('Приемная комиссия: (3412)370488')
+        await update.message.reply_text('Бухгалтерия: +7(3412) 37-05-00') 
+        await update.message.reply_text('Очное отделение: +7(3412) 37-02-0')
+        await update.message.reply_text('Заочное отделение: +7(3412) 37-02-77')
+        await update.message.reply_text('Общежитие: +7(3412) 37-04-88')
+    
+    elif text == "Сайт техникума":
+        keyboard = [[InlineKeyboardButton("Сайт техникума", url="https://koopteh.ru/")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text("Связаться с нами можно на сайте техникума!:", reply_markup=reply_markup)
+
+    elif text == "Специальности":
+        keyboard = [
+            [InlineKeyboardButton("43.02.15 Поварское и кондитерское дело", callback_data="43.02.15")],
+            [InlineKeyboardButton("43.02.16 Туризм и гостеприимство", callback_data="43.02.16")],
+            [InlineKeyboardButton("40.02.04 Юриспруденция", callback_data="40.02.04")],
+            [InlineKeyboardButton("40.02.02 Правоохранительная деятельность", callback_data="40.02.02")],
+            [InlineKeyboardButton("38.02.06 Финансы", callback_data="38.02.06")],
+            [InlineKeyboardButton("38.02.08 Торговое дело", callback_data="38.02.08")],
+            [InlineKeyboardButton("54.02.01 Дизайн (по отраслям)", callback_data="54.02.01")],
+            [InlineKeyboardButton("09.02.07 Информационные системы и программирование", callback_data="09.02.07")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text("Выберите специальность:", reply_markup=reply_markup)
+
+
+async def handle_inline_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == "43.02.15":
+        await query.edit_message_text("Поварское и кондитерское дело: 3 г. 10 м. (очная)- на базе основного общего / 2 г. 10 м. (очная ) - на базе среднего общего / 3 г. 4 м. (заочная ) - на базе среднего общего. Cтоимость: 510.000р / 309.000р / 149.000р ")
+    elif query.data == "43.02.16":
+        await query.edit_message_text("Туризм и гостеприимство: 2 г. 10 м. (очная)- на базе основного общего / 2 г. 4 м. (заочная) - на базе среднего общего. Стоимость: 360.000р / 102.000р ")
+    elif query.data == "40.02.04":
+        await query.edit_message_text("Юриспруденция: 2 г. 10 м. (очная) - на базе основного общего / 1 г. 10 м. (очная) - на базе среднего общего / 2 г. 4 м. (заочная) - на базе среднего общего. Стоимость: 360.000р / 197.000р / 102.000р ")
+    elif query.data == "40.02.02":
+        await query.edit_message_text("Правоохранительная деятельность: 3 г. 6 м. (очная) - на базе основного общего / 2 г. 6 м. (очная) - на базе среднего общего. Стоимость: 447.000р / 263.000р")
+    elif query.data == "38.02.06":
+        await query.edit_message_text("Финансы: 2 г. 10 м. (очная) - на базе основного общего / 1 г. 10 м. (очная) - на базе среднего общего / 2 г. 4 м. (заочная) - на базе среднего общего. Стоимость: 360.000р / 197.000р / 102.000р")
+    elif query.data == "38.02.08":
+        await query.edit_message_text("Торговое дело: 2 г. 10 м. (очная) - на базе основного общего / 1 г. 10 м. (очная) - на базе среднего общего / 2 г. 4 м. (заочная) - на базе среднего общего. Стоимость: 360.000р / 197.000р / 102.000р")
+    elif query.data == "54.02.01":
+        await query.edit_message_text("Дизайн: 3 г. 10 м. (очная) - на базе основного общего / 2 г. 10 м. (очная) - на базе среднего общего. Стоимость: 510.000р / 309.000р")
+    elif query.data == "09.02.07":
+        await query.edit_message_text("Информационные системы и программирование: 3 г. 10 м. - на базе основного общего / 2 г. 10 м. - на базе среднего общего. Стоимость: 510.000р / 309.000р")
+
+def main():
+    application = Application.builder().token(TOKEN).build()
+    
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_buttons))
+    application.add_handler(CallbackQueryHandler(handle_inline_buttons))
+    
+    application.run_polling()
+
+if __name__ == '__main__':
+    main()
