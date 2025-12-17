@@ -1,0 +1,154 @@
+import re  
+import os
+import sqlite3
+from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
+from telegram.ext import Application, MessageHandler, ContextTypes, filters, ConversationHandler, CommandHandler
+
+ADMIN_ID = 957556692 and 1429082639
+
+BOT_TOKEN = '8249390366:AAHtYIfV-GA68CF_ZoCX3t0xDzjN5iCv9oo'
+CAT_PHOTO_ID = 'images.jpg' 
+CAT_STICKER_ID = 'CAACAgIAAxkBAAIO52k2yqLHfLHrFPeRN71ET63AK9VVAAJZXgACo6qwSro_pecfcXx_NgQ' 
+CAT_VOICE_ID = 'voice_08-12-2025_16-57-18.mp3'
+
+EDIT_NAME = 1
+
+connection = sqlite3.connect('my_database.db', check_same_thread=False)
+cursor = connection.cursor()
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS Users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL,
+    last_user_name TEXT,
+    id_user TEXT NOT NULL UNIQUE,
+    user TEXT NOT NULL
+)
+''')
+connection.commit()
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    text = (
+        "<b> Доступные команды:</b>\n\n"
+        "/register — Регистрация в базе\n"
+        "/edit — Изменить свое имя в базе\n"
+        "/cancel — Отменить текущее действие\n"
+        "/help — Показать это меню\n"
+        "<code>кот</code> — Прислать фото котика\n"
+        "<code>мяу</code> — Послушать котика\n"
+        "<code>стикер</code> — Прислать стикер\n"
+        "<code>оценка</code> — Узнать авторов\n"
+    )
+    if update.effective_user.id == ADMIN_ID:
+        text += "\n<b>👑 Админ-команды:</b>\n/admin — Панель управления"
+    await update.message.reply_text(text, parse_mode='HTML')
+
+async def start_edit(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    await update.message.reply_text(
+        "Введите новое имя или напишите /cancel для отмены:",
+        reply_markup=ReplyKeyboardMarkup([['/cancel']], resize_keyboard=True)
+    )
+    return EDIT_NAME
+
+async def save_new_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    new_name = update.message.text
+    user_id = update.effective_user.id
+    cursor.execute('UPDATE Users SET username = ? WHERE id_user = ?', (new_name, str(user_id)))
+    connection.commit()
+    await update.message.reply_text(f"✅ Готово! Теперь вы в базе как: {new_name}", reply_markup=ReplyKeyboardRemove())
+    return ConversationHandler.END
+
+async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    await update.message.reply_text("❌ Действие отменено.", reply_markup=ReplyKeyboardRemove())
+    return ConversationHandler.END
+
+async def register(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user_name = update.effective_user.first_name
+    user_id = update.effective_user.id
+    user = update.effective_user.username or "нет"
+    last_user_name = update.effective_user.last_name or ""
+    
+    cursor.execute('SELECT * FROM Users WHERE id_user = ?', (str(user_id),))
+    if cursor.fetchone():
+        await update.message.reply_text(f"Вы уже зарегистрированы, {user_name}!")
+    else:
+        cursor.execute('INSERT INTO Users (username, last_user_name, id_user, user) VALUES (?, ?, ?, ?)', 
+                      (user_name, last_user_name, str(user_id), user))
+        connection.commit()
+        await update.message.reply_text(f"Успешная регистрация, {user_name}!")
+
+
+async def send_cat_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    with open(CAT_PHOTO_ID, 'rb') as photo:
+        await context.bot.send_photo(chat_id=update.effective_chat.id, photo=photo)
+
+async def send_cat_sticker(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await context.bot.send_sticker(chat_id=update.effective_chat.id, sticker=CAT_STICKER_ID)
+
+async def send_cat_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    with open(CAT_VOICE_ID, 'rb') as voice:
+        await context.bot.send_voice(chat_id=update.effective_chat.id, voice=voice)
+
+async def send_family(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text("Байгозин и Гарипов")
+    
+async def get_file_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    fid = "Не удалось определить"
+    if update.message.photo: fid = update.message.photo[-1].file_id
+    elif update.message.sticker: fid = update.message.sticker.file_id
+    elif update.message.voice: fid = update.message.voice.file_id
+    await update.message.reply_text(f"File ID: `{fid}`", parse_mode='Markdown')
+
+async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.effective_user.id == ADMIN_ID:
+        keyboard = [['Список пользователей'], ['/help']]
+        reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+        await update.message.reply_text("Панель администратора 2025", reply_markup=reply_markup)
+    else:
+        await update.message.reply_text("Доступ запрещен.")
+
+async def list_users(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.effective_user.id != ADMIN_ID: return
+    cursor.execute('SELECT username, last_user_name, id_user, user FROM Users')
+    users = cursor.fetchall()
+    if not users:
+        await update.message.reply_text("База пуста.")
+        return
+    
+    text = "<b>👥 Список пользователей:</b>\n\n"
+    for row in users:
+        first_name = row[0]
+        last_name = row[1] if row[1] else ""
+        user_id = row[2]
+        tg_username = f"(@{row[3]})" if row[3] and row[3] != 'None' else "(нет никнейма)"
+        
+        text += f"👤 {first_name} {last_name} {tg_username}\nID: <code>{user_id}</code>\n\n"
+        
+    await update.message.reply_text(text, parse_mode='HTML')
+
+
+def main() -> None:
+    application = Application.builder().token(BOT_TOKEN).build()
+
+    edit_handler = ConversationHandler(
+        entry_points=[MessageHandler(filters.Regex(r'(?i)^/edit$'), start_edit)],
+        states={
+            EDIT_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, save_new_name)],
+        },
+        fallbacks=[CommandHandler('cancel', cancel), MessageHandler(filters.Regex(r'(?i)^/cancel$'), cancel)],
+        allow_reentry=True
+    )
+    application.add_handler(edit_handler)
+    application.add_handler(MessageHandler(filters.Regex(r'(?i)^/help$'), help_command))
+    application.add_handler(CommandHandler("start", help_command))
+    application.add_handler(MessageHandler(filters.Regex(r'(?i)^/register$'), register))
+    application.add_handler(MessageHandler(filters.Regex(r'(?i)^/admin$'), admin_panel))
+    application.add_handler(MessageHandler(filters.Regex(r'^Список пользователей$'), list_users))
+    application.add_handler(MessageHandler(filters.Regex(r'(?i)^кот$'), send_cat_photo))
+    application.add_handler(MessageHandler(filters.Regex(r'(?i)^стикер$'), send_cat_sticker))
+    application.add_handler(MessageHandler(filters.Regex(r'(?i)^мяу$'), send_cat_voice))
+    application.add_handler(MessageHandler(filters.Regex(r'(?i)^оценка$'), send_family))
+    application.add_handler(MessageHandler(filters.PHOTO | filters.VOICE | filters.Sticker.ALL, get_file_id))
+    application.run_polling(poll_interval=2.0)
+    
+if __name__ == "__main__":
+    main()
