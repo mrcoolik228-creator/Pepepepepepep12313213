@@ -1,0 +1,69 @@
+import re  
+BOT_TOKEN = ''
+
+from telegram import Update
+from telegram.ext import Application, MessageHandler, ContextTypes, filters
+
+CAT_PHOTO_ID = 'images.jpg' 
+CAT_STICKER_ID = 'CAACAgIAAxkBAAIO52k2yqLHfLHrFPeRN71ET63AK9VVAAJZXgACo6qwSro_pecfcXx_NgQ' 
+CAT_VOICE_ID = 'voice_08-12-2025_16-57-18.mp3'
+
+import sqlite3
+connection = sqlite3.connect('my_database.db')
+cursor = connection.cursor()
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS Users (
+id INTEGER PRIMARY KEY,
+username TEXT NOT NULL,
+last_user_name TEXT,
+id_user TEXT NOT NULL,
+user TEXT NOT NULL
+)
+''')
+async def register(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user_name = update.effective_user.first_name
+    user_id = update.effective_user.id
+    user = update.effective_user.username
+    last_user_name = update.effective_user.last_name
+    cursor.execute('INSERT INTO Users (username, last_user_name, id_user, user) VALUES (?, ?, ?, ?)', (user_name, last_user_name, user_id, user))
+    await update.message.reply_text(f", {user_name}!")
+    connection.commit()
+    
+async def send_cat_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await context.bot.send_photo(chat_id=update.effective_chat.id, photo=CAT_PHOTO_ID)
+
+async def send_cat_sticker(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await context.bot.send_sticker(chat_id=update.effective_chat.id, sticker=CAT_STICKER_ID)
+
+async def send_cat_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await context.bot.send_voice(chat_id=update.effective_chat.id, voice=CAT_VOICE_ID)
+
+async def send_family(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text("Байгозин и Гарипов")
+    
+async def get_file_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message.photo:
+        file_id = update.message.photo[-1].file_id
+        await update.message.reply_text(f"File ID для фото: `{file_id}`")
+    elif update.message.sticker:
+        file_id = update.message.sticker.file_id
+        await update.message.reply_text(f"File ID для стикера: `{file_id}`")
+    elif update.message.voice:
+        file_id = update.message.voice.file_id
+        await update.message.reply_text(f"File ID для голосового сообщения: `{file_id}`")
+
+
+def main() -> None:
+    application = Application.builder().token(BOT_TOKEN).build()
+
+    application.add_handler(MessageHandler(filters.Regex(r'(?i)^кот$'), send_cat_photo))
+    application.add_handler(MessageHandler(filters.Regex(r'(?i)^стикер$'), send_cat_sticker))
+    application.add_handler(MessageHandler(filters.Regex(r'(?i)^мяу$'), send_cat_voice))
+    application.add_handler(MessageHandler(filters.Regex(r'(?i)^оценка$'), send_family))
+    application.add_handler(MessageHandler(filters.Regex(r'(?i)^/register$'), register))
+    application.add_handler(MessageHandler(filters.PHOTO | filters.ATTACHMENT | filters.VOICE, get_file_id))
+
+    application.run_polling(poll_interval=3.0)
+    
+if __name__ == "__main__":
+    main()
