@@ -4,9 +4,9 @@ import sqlite3
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import Application, MessageHandler, ContextTypes, filters, ConversationHandler, CommandHandler
 
-ADMIN_ID = 957556692 and 1429082639
+ADMIN_ID = 957556692
 
-BOT_TOKEN = '8249390366:AAHtYIfV-GA68CF_ZoCX3t0xDzjN5iCv9oo'
+BOT_TOKEN = ''
 CAT_PHOTO_ID = 'images.jpg' 
 CAT_STICKER_ID = 'CAACAgIAAxkBAAIO52k2yqLHfLHrFPeRN71ET63AK9VVAAJZXgACo6qwSro_pecfcXx_NgQ' 
 CAT_VOICE_ID = 'voice_08-12-2025_16-57-18.mp3'
@@ -39,7 +39,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "<code>оценка</code> — Узнать авторов\n"
     )
     if update.effective_user.id == ADMIN_ID:
-        text += "\n<b>👑 Админ-команды:</b>\n/admin — Панель управления"
+        text += "\n<b>Админ-команды:</b>\n/admin — Панель управления"
     await update.message.reply_text(text, parse_mode='HTML')
 
 async def start_edit(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -54,11 +54,11 @@ async def save_new_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     user_id = update.effective_user.id
     cursor.execute('UPDATE Users SET username = ? WHERE id_user = ?', (new_name, str(user_id)))
     connection.commit()
-    await update.message.reply_text(f"✅ Готово! Теперь вы в базе как: {new_name}", reply_markup=ReplyKeyboardRemove())
+    await update.message.reply_text(f"Готово! Теперь вы в базе как: {new_name}", reply_markup=ReplyKeyboardRemove())
     return ConversationHandler.END
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    await update.message.reply_text("❌ Действие отменено.", reply_markup=ReplyKeyboardRemove())
+    await update.message.reply_text("Действие отменено.", reply_markup=ReplyKeyboardRemove())
     return ConversationHandler.END
 
 async def register(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -69,12 +69,12 @@ async def register(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     
     cursor.execute('SELECT * FROM Users WHERE id_user = ?', (str(user_id),))
     if cursor.fetchone():
-        await update.message.reply_text(f"Вы уже зарегистрированы, {user_name}!")
+        await update.message.reply_text(f"Вы уже зарегистрированы, {name}!")
     else:
         cursor.execute('INSERT INTO Users (username, last_user_name, id_user, user) VALUES (?, ?, ?, ?)', 
                       (user_name, last_user_name, str(user_id), user))
         connection.commit()
-        await update.message.reply_text(f"Успешная регистрация, {user_name}!")
+        await update.message.reply_text(f"Успешная регистрация, {name}!")
 
 
 async def send_cat_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -102,7 +102,7 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     if update.effective_user.id == ADMIN_ID:
         keyboard = [['Список пользователей'], ['/help']]
         reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-        await update.message.reply_text("Панель администратора 2025", reply_markup=reply_markup)
+        await update.message.reply_text("Вы царь и бог", reply_markup=reply_markup)
     else:
         await update.message.reply_text("Доступ запрещен.")
 
@@ -114,14 +114,14 @@ async def list_users(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         await update.message.reply_text("База пуста.")
         return
     
-    text = "<b>👥 Список пользователей:</b>\n\n"
+    text = "<b>Список пользователей:</b>\n\n"
     for row in users:
         first_name = row[0]
         last_name = row[1] if row[1] else ""
         user_id = row[2]
         tg_username = f"(@{row[3]})" if row[3] and row[3] != 'None' else "(нет никнейма)"
         
-        text += f"👤 {first_name} {last_name} {tg_username}\nID: <code>{user_id}</code>\n\n"
+        text += f"{first_name} {last_name} {tg_username}\nID: <code>{user_id}</code>\n\n"
         
     await update.message.reply_text(text, parse_mode='HTML')
 
